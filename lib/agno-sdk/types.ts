@@ -4,8 +4,6 @@
 
 export interface AgnoConfig {
   apiKey: string;
-  walletUrl?: string; // Default: http://localhost:3000
-  apiUrl?: string; // Default: https://agnoapi.vercel.app
 }
 
 export interface LineItem {

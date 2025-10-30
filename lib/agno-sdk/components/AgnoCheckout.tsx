@@ -3,9 +3,11 @@
 import React from 'react';
 import type { IframeStyleConfig } from '../types';
 
+// Hardcoded Agno Wallet URL
+const AGNO_WALLET_URL = 'http://localhost:3000';
+
 export interface AgnoCheckoutProps {
   orderId: string;
-  walletUrl?: string;
   onSuccess?: (orderId: string) => void;
   onError?: (error: Error) => void;
   className?: string;
@@ -20,7 +22,6 @@ export interface AgnoCheckoutProps {
  */
 export function AgnoCheckout({
   orderId,
-  walletUrl = 'http://localhost:3000',
   onSuccess,
   onError,
   className,
@@ -30,7 +31,7 @@ export function AgnoCheckout({
 }: AgnoCheckoutProps) {
   // Build iframe URL with style parameters
   const iframeUrl = React.useMemo(() => {
-    const url = new URL(`${walletUrl}/order/${orderId}`);
+    const url = new URL(`${AGNO_WALLET_URL}/orders/${orderId}`);
 
     if (style) {
       if (style.transparent !== undefined) {
@@ -54,13 +55,13 @@ export function AgnoCheckout({
     }
 
     return url.toString();
-  }, [walletUrl, orderId, style]);
+  }, [orderId, style]);
 
   // Listen for messages from the iframe (for future payment status updates)
   React.useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       // Only accept messages from the wallet URL
-      if (!event.origin.startsWith(walletUrl)) {
+      if (!event.origin.startsWith(AGNO_WALLET_URL)) {
         return;
       }
 
@@ -79,7 +80,7 @@ export function AgnoCheckout({
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [walletUrl, orderId, onSuccess, onError]);
+  }, [orderId, onSuccess, onError]);
 
   // Apply transparent background if configured
   const containerClassName = React.useMemo(() => {

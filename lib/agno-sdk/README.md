@@ -4,139 +4,166 @@ A TypeScript SDK for integrating Agno payment processing into your application.
 
 ## Features
 
-- 🔐 Secure server-side API key management
-- 💳 Simple order creation
-- 🎨 Pre-built checkout UI component
+- 🔐 Client-side order creation with publishable keys
+- 💳 2-step integration - no API routes required
+- 🎨 Customizable checkout UI with full styling support
 - 📦 TypeScript support with full type definitions
-- ⚡ React hooks compatible
+- ⚡ React hooks and components
+- 🚀 Production-ready
 
 ## Installation
 
 The SDK is located in `lib/agno-sdk` and can be imported directly:
 
 ```typescript
-import { AgnoSDK, AgnoCheckout } from '@/lib/agno-sdk';
+import { useAgnoCheckout, AgnoCheckout } from '@/lib/agno-sdk';
 ```
 
 ## Quick Start
 
-### 1. Server-Side: Create Orders
+### Step 1: Set Your Publishable Key
 
-Use the SDK in API routes to create orders securely:
+Create a `.env.local` file:
 
-```typescript
-// app/api/orders/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { AgnoSDK } from '@/lib/agno-sdk';
-
-const agno = new AgnoSDK({
-  apiKey: process.env.AGNOPAY_KEY || '',
-});
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const order = await agno.createOrder(body);
-    return NextResponse.json(order);
-  } catch (error) {
-    return NextResponse.json({ error }, { status: 400 });
-  }
-}
+```bash
+NEXT_PUBLIC_AGNOPAY_KEY="ak_your_publishable_key_here"
 ```
 
-### 2. Client-Side: Display Checkout
-
-Use the `AgnoCheckout` component to display the payment interface:
+### Step 2: Create Orders & Display Checkout
 
 ```typescript
 'use client';
 
+import { useAgnoCheckout, AgnoCheckout } from '@/lib/agno-sdk';
+import { useRouter } from 'next/navigation';
+
+export default function ProductPage() {
+  const router = useRouter();
+  const { createOrder, isLoading } = useAgnoCheckout({
+    onSuccess: (order) => router.push(`/checkout/${order.id}`),
+  });
+
+  const handleCheckout = async () => {
+    await createOrder({
+      line_items: [{
+        code: 'ITEM-001',
+        description: 'Premium Product',
+        amount: 9900, // Amount in cents
+        quantity: 1
+      }]
+    });
+  };
+
+  return (
+    <button onClick={handleCheckout} disabled={isLoading}>
+      {isLoading ? 'Processing...' : 'Buy Now'}
+    </button>
+  );
+}
+```
+
+### Step 3: Create Checkout Page
+
+```typescript
+'use client';
+
+import { use } from 'react';
 import { AgnoCheckout } from '@/lib/agno-sdk';
 import { useRouter } from 'next/navigation';
 
-export default function CheckoutPage({ orderId }: { orderId: string }) {
+export default function CheckoutPage({
+  params
+}: {
+  params: Promise<{ orderId: string }>
+}) {
+  const { orderId } = use(params);
   const router = useRouter();
 
   return (
     <AgnoCheckout
       orderId={orderId}
-      walletUrl="http://localhost:3000"
-      onSuccess={(orderId) => router.push(`/success?orderId=${orderId}`)}
-      onError={(error) => console.error(error)}
+      onSuccess={() => router.push('/success')}
     />
   );
 }
 ```
 
+That's it! 🎉
+
 ## API Reference
 
-### AgnoSDK
+### useAgnoCheckout
 
-#### Constructor
+React hook for creating orders from the client.
 
 ```typescript
-const agno = new AgnoSDK({
-  apiKey: string;           // Your Agno API key (required)
-  walletUrl?: string;       // Wallet URL (default: http://localhost:3000)
-  apiUrl?: string;          // API URL (default: https://agnoapi.vercel.app)
-});
+const { createOrder, isLoading, error, order } = useAgnoCheckout(options);
 ```
 
-#### Methods
+#### Options
 
-##### `createOrder(request: CreateOrderRequest): Promise<CreateOrderResponse>`
+| Option | Type | Description |
+|--------|------|-------------|
+| `publishableKey` | `string?` | Public API key (auto-loads from `NEXT_PUBLIC_AGNOPAY_KEY`) |
+| `onSuccess` | `(order) => void` | Called when order is successfully created |
+| `onError` | `(error) => void` | Called when order creation fails |
 
-Creates a new order.
+#### Returns
 
-```typescript
-const order = await agno.createOrder({
-  line_items: [
-    {
-      code: 'ITEM-001',
-      description: 'Premium Course',
-      amount: 1000,      // Amount in cents
-      quantity: 1,
-    },
-  ],
-});
-```
+| Property | Type | Description |
+|----------|------|-------------|
+| `createOrder` | `(request) => Promise<Order \| null>` | Function to create a new order |
+| `isLoading` | `boolean` | Loading state |
+| `error` | `AgnoError \| null` | Error object if creation failed |
+| `order` | `Order \| null` | Created order object |
 
-##### `getOrderUrl(orderId: string): string`
-
-Returns the full wallet URL for an order.
+#### Order Request
 
 ```typescript
-const url = agno.getOrderUrl('order_123');
-// Returns: http://localhost:3000/order/order_123
-```
+interface CreateOrderRequest {
+  line_items: LineItem[];
+}
 
-### AgnoCheckout Component
-
-A React component that displays the checkout interface in an iframe.
-
-#### Props
-
-```typescript
-interface AgnoCheckoutProps {
-  orderId: string;                        // The order ID (required)
-  walletUrl?: string;                     // Wallet URL (default: http://localhost:3000)
-  onSuccess?: (orderId: string) => void;  // Success callback
-  onError?: (error: Error) => void;       // Error callback
-  className?: string;                     // Custom CSS class
-  title?: string;                         // Checkout title (default: "Complete Your Purchase")
-  hideHeader?: boolean;                   // Hide the checkout header (default: false)
-  style?: IframeStyleConfig;              // Iframe styling configuration
+interface LineItem {
+  code: string;        // Product code
+  description: string; // Product description
+  amount: number;      // Amount in cents (e.g., 9900 = $99.00)
+  quantity: number;    // Quantity
 }
 ```
 
-#### Styling Configuration
+### AgnoCheckout
 
-Customize the appearance of the checkout iframe:
+Component that displays the checkout interface in an iframe.
+
+```typescript
+<AgnoCheckout
+  orderId={order.id}
+  onSuccess={(orderId) => router.push('/success')}
+  style={{ primaryColor: '#10b981' }}
+/>
+```
+
+#### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `orderId` | `string` | - | **Required.** The order ID |
+| `onSuccess` | `(orderId) => void` | - | Called when payment succeeds |
+| `onError` | `(error) => void` | - | Called when payment fails |
+| `title` | `string` | `"Complete Your Purchase"` | Checkout header title |
+| `hideHeader` | `boolean` | `false` | Hide the header |
+| `className` | `string` | - | Custom CSS class |
+| `style` | `IframeStyleConfig` | - | Custom styling |
+
+#### Styling
+
+Customize the checkout appearance:
 
 ```typescript
 interface IframeStyleConfig {
-  transparent?: boolean;      // Make background transparent
-  primaryColor?: string;      // Primary color (can be gradient)
+  transparent?: boolean;      // Transparent background
+  primaryColor?: string;      // Primary color or gradient
   backgroundColor?: string;   // Background color
   textColor?: string;         // Text color
   borderRadius?: string;      // Border radius (e.g., "0.5rem")
@@ -144,61 +171,68 @@ interface IframeStyleConfig {
 }
 ```
 
-**Example with custom styling:**
+## Examples
+
+### Basic Usage
+
+```typescript
+const { createOrder, isLoading } = useAgnoCheckout({
+  onSuccess: (order) => console.log('Order created:', order.id),
+  onError: (error) => alert(error.message),
+});
+
+await createOrder({
+  line_items: [{
+    code: 'PROD-001',
+    description: 'My Product',
+    amount: 5000,
+    quantity: 1
+  }]
+});
+```
+
+### Custom Styled Checkout
 
 ```typescript
 <AgnoCheckout
   orderId={order.id}
+  title="Secure Payment"
   style={{
-    transparent: true,
     primaryColor: '#10b981',
     textColor: '#ffffff',
     borderRadius: '1rem',
     fontFamily: 'Inter, sans-serif',
   }}
-  hideHeader={false}
+  onSuccess={() => router.push('/thank-you')}
 />
 ```
 
-## Environment Variables
-
-Create a `.env` file with your Agno API key:
-
-```bash
-AGNOPAY_KEY=your_api_key_here
-```
-
-⚠️ **Important**: Never expose your API key in client-side code. Always use it server-side only.
-
-## Complete Example
+### Gradient Header
 
 ```typescript
-// 1. Create order from client
-const response = await fetch('/api/orders', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    line_items: [{
-      code: 'PROD-001',
-      description: 'My Product',
-      amount: 5000,
-      quantity: 1,
-    }],
-  }),
-});
-
-const order = await response.json();
-
-// 2. Redirect to checkout
-router.push(`/checkout/${order.id}`);
-
-// 3. Display checkout with AgnoCheckout component
-<AgnoCheckout orderId={order.id} />
+<AgnoCheckout
+  orderId={order.id}
+  style={{
+    primaryColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    textColor: '#ffffff',
+  }}
+/>
 ```
 
-## Types
+### Transparent Overlay
 
-All TypeScript types are exported from the SDK:
+```typescript
+<AgnoCheckout
+  orderId={order.id}
+  hideHeader={true}
+  style={{ transparent: true }}
+  className="fixed inset-0 z-50"
+/>
+```
+
+## TypeScript Types
+
+All types are exported from the SDK:
 
 ```typescript
 import type {
@@ -209,52 +243,100 @@ import type {
   AgnoError,
   IframeStyleConfig,
   AgnoCheckoutProps,
+  UseAgnoCheckoutOptions,
+  UseAgnoCheckoutReturn,
 } from '@/lib/agno-sdk';
 ```
 
-## Advanced Usage
+## Environment Variables
 
-### Custom Branded Checkout
-
-Create a fully branded checkout experience:
-
-```typescript
-<AgnoCheckout
-  orderId={order.id}
-  walletUrl="http://localhost:3000"
-  title="Secure Checkout"
-  style={{
-    transparent: false,
-    primaryColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    backgroundColor: '#f9fafb',
-    textColor: '#ffffff',
-    borderRadius: '1rem',
-    fontFamily: '"Inter", "Helvetica Neue", sans-serif',
-  }}
-  onSuccess={(orderId) => {
-    console.log('Payment successful!', orderId);
-    router.push('/success');
-  }}
-  onError={(error) => {
-    console.error('Payment failed:', error);
-  }}
-/>
+```bash
+# .env.local
+NEXT_PUBLIC_AGNOPAY_KEY="ak_your_publishable_key"
 ```
 
-### Transparent Overlay Checkout
+**Security Note:** Publishable keys are safe to expose in client-side code. They can only create orders and cannot access sensitive operations.
 
-Embed the checkout as a transparent overlay:
+## Error Handling
 
 ```typescript
-<AgnoCheckout
-  orderId={order.id}
-  hideHeader={true}
-  style={{
-    transparent: true,
-  }}
-  className="fixed inset-0 z-50"
-/>
+const { createOrder, error } = useAgnoCheckout({
+  onError: (error) => {
+    console.error('Order creation failed:', error.message);
+    // Handle error appropriately
+  }
+});
+
+if (error) {
+  return <div>Error: {error.message}</div>;
+}
 ```
+
+## Complete Example
+
+```typescript
+'use client';
+
+import { useAgnoCheckout, AgnoCheckout } from '@/lib/agno-sdk';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
+export default function ProductPage() {
+  const router = useRouter();
+  const [checkoutId, setCheckoutId] = useState<string | null>(null);
+
+  const { createOrder, isLoading, error } = useAgnoCheckout({
+    onSuccess: (order) => setCheckoutId(order.id),
+    onError: (error) => alert(error.message),
+  });
+
+  const handlePurchase = async () => {
+    await createOrder({
+      line_items: [{
+        code: 'PREMIUM-001',
+        description: 'Premium Package',
+        amount: 9900,
+        quantity: 1
+      }]
+    });
+  };
+
+  if (checkoutId) {
+    return (
+      <AgnoCheckout
+        orderId={checkoutId}
+        onSuccess={() => router.push('/success')}
+        style={{ primaryColor: '#10b981' }}
+      />
+    );
+  }
+
+  return (
+    <div className="p-8">
+      <h1 className="text-3xl font-bold mb-4">Premium Package</h1>
+      <p className="text-xl mb-6">$99.00</p>
+
+      {error && (
+        <div className="bg-red-50 text-red-600 p-4 rounded mb-4">
+          {error.message}
+        </div>
+      )}
+
+      <button
+        onClick={handlePurchase}
+        disabled={isLoading}
+        className="bg-blue-600 text-white px-6 py-3 rounded-lg disabled:opacity-50"
+      >
+        {isLoading ? 'Processing...' : 'Buy Now'}
+      </button>
+    </div>
+  );
+}
+```
+
+## Support
+
+For issues or questions, please refer to the main Agno documentation.
 
 ## License
 

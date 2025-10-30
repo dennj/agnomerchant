@@ -26,13 +26,12 @@ export default function CheckoutPage({
   return (
     <AgnoCheckout
       orderId={orderId}
-      walletUrl="http://localhost:3000"
       onSuccess={handleSuccess}
       onError={handleError}
       style={{
         transparent: false,
         primaryColor: '#dc2626', // Red color
-        textColor: 'white',
+        textColor: '#2c2a2aff',
         borderRadius: '0.5rem',
         fontFamily: 'system-ui, -apple-system, sans-serif',
       }}

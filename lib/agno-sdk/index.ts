@@ -2,26 +2,33 @@
  * Agno SDK
  *
  * A TypeScript SDK for integrating Agno payment processing into your application.
+ * No API routes required - works entirely client-side with publishable keys (like Stripe).
  *
- * @example Server-side (API Route)
- * ```ts
- * // app/api/agno/orders/route.ts
- * import { createOrderRouteHandler } from '@/lib/agno-sdk/server';
- *
- * export const POST = createOrderRouteHandler(process.env.AGNOPAY_KEY || '');
- * ```
- *
- * @example Client-side
+ * @example Basic Usage (No API Routes Needed!)
  * ```tsx
+ * // 1. Set env: NEXT_PUBLIC_AGNOPAY_KEY="ak_your_key"
+ *
+ * // 2. Use the hook
  * import { useAgnoCheckout, AgnoCheckout } from '@/lib/agno-sdk';
  *
- * const { createOrder, isLoading } = useAgnoCheckout();
- *
- * const order = await createOrder({
- *   line_items: [{ code: 'ITEM-001', description: 'Product', amount: 1000, quantity: 1 }]
+ * const { createOrder, isLoading } = useAgnoCheckout({
+ *   onSuccess: (order) => router.push(`/checkout/${order.id}`)
  * });
  *
- * <AgnoCheckout orderId={order.id} />
+ * // 3. Create order (calls Agno API directly)
+ * await createOrder({
+ *   line_items: [{ code: 'ITEM-001', description: 'Product', amount: 9900, quantity: 1 }]
+ * });
+ *
+ * // 4. Display checkout with custom styling
+ * <AgnoCheckout orderId={order.id} style={{ primaryColor: '#10b981' }} />
+ * ```
+ *
+ * @example Advanced: Server-side (Optional)
+ * ```ts
+ * // Only if you need server-side order creation
+ * import { createOrderRouteHandler } from '@/lib/agno-sdk/server';
+ * export const POST = createOrderRouteHandler(process.env.AGNOPAY_SECRET_KEY || '');
  * ```
  */
 

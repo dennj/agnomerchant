@@ -9,15 +9,14 @@ import type {
   AgnoError,
 } from './types';
 
+// Hardcoded Agno API URL
+const AGNO_API_URL = 'https://agnoapi.vercel.app';
+
 export class AgnoClient {
-  private config: Required<AgnoConfig>;
+  private config: AgnoConfig;
 
   constructor(config: AgnoConfig) {
-    this.config = {
-      apiKey: config.apiKey,
-      walletUrl: config.walletUrl || 'http://localhost:3000',
-      apiUrl: config.apiUrl || 'https://agnoapi.vercel.app',
-    };
+    this.config = config;
   }
 
   /**
@@ -27,7 +26,7 @@ export class AgnoClient {
     request: CreateOrderRequest
   ): Promise<CreateOrderResponse> {
     try {
-      const response = await fetch(`${this.config.apiUrl}/v1/orders`, {
+      const response = await fetch(`${AGNO_API_URL}/v1/orders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -57,19 +56,5 @@ export class AgnoClient {
         details: error,
       } as AgnoError;
     }
-  }
-
-  /**
-   * Get the wallet URL for an order
-   */
-  getOrderUrl(orderId: string): string {
-    return `${this.config.walletUrl}/order/${orderId}`;
-  }
-
-  /**
-   * Get the wallet URL
-   */
-  getWalletUrl(): string {
-    return this.config.walletUrl;
   }
 }
