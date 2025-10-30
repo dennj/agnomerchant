@@ -1,48 +1,31 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAgnoCheckout } from '@/lib/agno-sdk';
 
 export default function ProductPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const { createOrder, isLoading } = useAgnoCheckout({
+    onSuccess: (order) => {
+      // Redirect to checkout page with iframe
+      router.push(`/checkout/${order.id}`);
+    },
+    onError: (error) => {
+      alert(error.message || 'Failed to start checkout');
+    },
+  });
 
   const handleCheckout = async () => {
-    setIsLoading(true);
-
-    try {
-      // Create order intent via API
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+    await createOrder({
+      line_items: [
+        {
+          code: 'ITEM-001',
+          description: 'Premium Course Bundle',
+          amount: 9900,
+          quantity: 1,
         },
-        body: JSON.stringify({
-          line_items: [
-            {
-              code: 'ITEM-001',
-              description: 'Test Product',
-              amount: 99,
-              quantity: 1,
-            },
-          ],
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || 'Failed to create order');
-      }
-
-      const orderIntent = await response.json();
-
-      // Redirect to checkout page with iframe
-      router.push(`/checkout/${orderIntent.id}`);
-    } catch (error) {
-      console.error('Checkout error:', error);
-      alert(error instanceof Error ? error.message : 'Failed to start checkout');
-      setIsLoading(false);
-    }
+      ],
+    });
   };
 
   return (
