@@ -1,11 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useAgnoCheckout } from '@/lib/agno-sdk';
+import { useAgnoPayCheckout } from '@agnopay/sdk';
 
 export default function ProductPage() {
   const router = useRouter();
-  const { createOrder, isLoading } = useAgnoCheckout({
+  const { createOrder, isLoading } = useAgnoPayCheckout({
     onSuccess: (order) => {
       // Redirect to checkout page with iframe
       router.push(`/checkout/${order.id}`);

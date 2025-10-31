@@ -1,7 +1,7 @@
 'use client';
 
 import { use } from 'react';
-import { AgnoCheckout } from '@/lib/agno-sdk';
+import { AgnoPayCheckout } from '@agnopay/sdk';
 import { useRouter } from 'next/navigation';
 
 export default function CheckoutPage({
@@ -24,7 +24,7 @@ export default function CheckoutPage({
   };
 
   return (
-    <AgnoCheckout
+    <AgnoPayCheckout
       orderId={orderId}
       onSuccess={handleSuccess}
       onError={handleError}
