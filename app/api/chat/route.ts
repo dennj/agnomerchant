@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { QdrantClient } from '@qdrant/js-client-rest';
+import { createClient } from '@/lib/supabase/server';
+import { getAllProducts } from '@/lib/qdrant/client';
+import { Product } from '@/lib/types/product';
 
 // Fail fast: Check API keys at module level
 const openaiKey = process.env.OPENAI_API_KEY;
@@ -16,11 +19,11 @@ const qdrant = (qdrantUrl && qdrantKey)
   ? new QdrantClient({ url: qdrantUrl, apiKey: qdrantKey })
   : null;
 
-async function searchProducts(query: string) {
+async function searchProducts(merchantId: string, query: string) {
   if (!openai || !qdrant) return null;
 
   try {
-    // Generate embedding for the query with 384 dimensions to match Shulki5 text vector
+    // Generate embedding for the query with 384 dimensions to match agnopay text vector
     const embedding = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: query,
@@ -29,14 +32,19 @@ async function searchProducts(query: string) {
 
     const vector = embedding.data[0].embedding;
 
-    // Search Qdrant using named vector "text"
-    const searchResult = await qdrant.search('Shulki5', {
+    // Search Qdrant using named vector "text" with merchant filter
+    const searchResult = await qdrant.search('agnopay', {
       vector: {
         name: 'text',
         vector: vector,
       },
       limit: 4,
       with_payload: true,
+      filter: {
+        must: [
+          { key: 'merchant_id', match: { value: merchantId } }
+        ]
+      }
     });
 
     return searchResult.map((point) => ({
@@ -50,6 +58,25 @@ async function searchProducts(query: string) {
   }
 }
 
+// Define the function tool for searching products
+const searchProductsTool = {
+  type: 'function' as const,
+  function: {
+    name: 'search_products',
+    description: 'Search the product catalog for courses, events, or products based on a query. Use this when the user asks about specific items, wants to see available options, or needs product recommendations.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'The search query describing what the user is looking for (e.g., "leadership courses", "events in São Paulo", "financial planning")',
+        },
+      },
+      required: ['query'],
+    },
+  },
+};
+
 export async function POST(req: Request) {
   // Fail fast: Check OpenAI client
   if (!openai) {
@@ -60,6 +87,19 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Check authentication
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const merchantId = user.id;
+
     const { messages } = await req.json();
 
     // Fail fast: Validate input
@@ -70,25 +110,25 @@ export async function POST(req: Request) {
       );
     }
 
-    const lastMessage = messages[messages.length - 1]?.content || '';
-
-    // Check if this is a product search query
-    const isProductSearch = /\b(show|find|search|looking for|recommend|shoes?|sneakers?|trainers?|adidas)\b/i.test(lastMessage);
-
-    let products = null;
-    if (isProductSearch && qdrant) {
-      products = await searchProducts(lastMessage);
+    // Fetch all products for catalog overview (once per conversation)
+    let allProducts: Partial<Product>[] = [];
+    try {
+      allProducts = await getAllProducts(merchantId, 100);
+    } catch (error) {
+      console.error('Failed to load catalog:', error);
     }
 
-    // Build context with products if found
-    const systemMessage = products && products.length > 0
-      ? `You are a helpful shopping assistant for an Adidas shoe store. I found ${products.length} relevant products for the user's query. Describe them briefly and mention that they can see the product cards below. Keep it concise (2-3 sentences).
+    // Create catalog overview for context
+    const catalogOverview = allProducts.length > 0
+      ? `\n\nAvailable Catalog (${allProducts.length} items):\n${allProducts.map((p) => `- ${p.product_name || p.Name}`).join('\n')}`
+      : '';
 
-Products found:
-${products.map((p, i) => `${i + 1}. ${p.product_name} - $${p.price} - ${p.Short_description || p.Description?.substring(0, 100)}`).join('\n')}`
-      : 'You are a helpful assistant for an Adidas shoe store. Help customers find shoes and answer questions. Keep responses concise and friendly.';
+    const systemMessage = `You are a helpful shopping assistant for a merchant selling courses, events, and products. Help customers find what they're looking for and answer their questions.
+${catalogOverview}
 
-    // Call OpenAI with timeout
+When a user asks about specific products, courses, or events, use the search_products function to find relevant items. Keep responses concise and friendly.`;
+
+    // Call OpenAI with function calling
     const completion = await Promise.race([
       openai.chat.completions.create({
         model: 'gpt-4o-mini',
@@ -96,6 +136,8 @@ ${products.map((p, i) => `${i + 1}. ${p.product_name} - $${p.price} - ${p.Short_
           { role: 'system', content: systemMessage },
           ...messages
         ],
+        tools: [searchProductsTool],
+        tool_choice: 'auto',
         max_tokens: 500,
       }),
       new Promise((_, reject) =>
@@ -103,9 +145,61 @@ ${products.map((p, i) => `${i + 1}. ${p.product_name} - $${p.price} - ${p.Short_
       )
     ]) as OpenAI.Chat.Completions.ChatCompletion;
 
-    const reply = completion.choices[0]?.message?.content;
+    const message = completion.choices[0]?.message;
 
-    // Fail fast: Check response
+    // Check if the model wants to call a function
+    if (message?.tool_calls && message.tool_calls.length > 0) {
+      const toolCall = message.tool_calls[0];
+
+      if (toolCall.type === 'function' && toolCall.function.name === 'search_products') {
+        const args = JSON.parse(toolCall.function.arguments);
+        const searchQuery = args.query;
+
+        // Execute the search
+        const products = await searchProducts(merchantId, searchQuery);
+
+        // Create function result message
+        const functionResult = products && products.length > 0
+          ? `Found ${products.length} relevant items:\n${products.map((p: Record<string, unknown>, i: number) => {
+              const name = (p.product_name || p.Name) as string;
+              const price = Number(p.price) / 100;
+              const desc = (p.Short_description || (p.Description as string)?.substring(0, 100)) as string;
+              return `${i + 1}. ${name} - R$ ${price.toFixed(2)} - ${desc}`;
+            }).join('\n')}`
+          : 'No matching products found in the catalog.';
+
+        // Call LLM again with function result
+        const secondCompletion = await openai.chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemMessage },
+            ...messages,
+            message,
+            {
+              role: 'tool',
+              tool_call_id: toolCall.id,
+              content: functionResult,
+            },
+          ],
+          max_tokens: 500,
+        });
+
+        const reply = secondCompletion.choices[0]?.message?.content;
+
+        if (!reply) {
+          return NextResponse.json(
+            { error: 'No response from ChatGPT' },
+            { status: 500 }
+          );
+        }
+
+        return NextResponse.json({ reply, products });
+      }
+    }
+
+    // No function call - just return the reply
+    const reply = message?.content;
+
     if (!reply) {
       return NextResponse.json(
         { error: 'No response from ChatGPT' },
@@ -113,7 +207,7 @@ ${products.map((p, i) => `${i + 1}. ${p.product_name} - $${p.price} - ${p.Short_
       );
     }
 
-    return NextResponse.json({ reply, products });
+    return NextResponse.json({ reply, products: null });
   } catch (error) {
     // Fail fast: Handle errors
     console.error('Chat error:', error);

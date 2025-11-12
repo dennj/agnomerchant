@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
-import { AgnoPayCheckout } from '@agnopay/sdk';
 import { ProductCard } from './product-card';
+import { AgnoPayCheckout } from '@agnopay/sdk';
 
 interface Product {
   id: string;
@@ -13,7 +13,6 @@ interface Product {
   image_url?: string;
   Short_description?: string;
   Description?: string;
-  Color?: string;
   SKU?: string;
 }
 
@@ -41,29 +40,21 @@ export function ChatbotBubble() {
     scrollToBottom();
   }, [messages]);
 
-  const handleOrderCreated = (orderId: string) => {
-    setCheckoutOrderId(orderId);
+  const handleOrderCreated = (payment: { orderId: string }) => {
+    setCheckoutOrderId(payment.orderId);
     setIsCheckoutOpen(true);
   };
 
-  const handleCheckoutSuccess = (orderId: string) => {
+  const handleCheckoutSuccess = () => {
     setIsCheckoutOpen(false);
     setCheckoutOrderId(null);
-    // Add success message to chat
-    setMessages((prev) => [...prev, {
-      role: 'assistant',
-      content: `✅ Payment successful! Your order ${orderId} has been confirmed. Thank you for your purchase!`
-    }]);
+    // Could add success message to chat here
   };
 
   const handleCheckoutError = (error: Error) => {
     console.error('Checkout error:', error);
+    setError(`Payment failed: ${error.message}`);
     setIsCheckoutOpen(false);
-    // Add error message to chat
-    setMessages((prev) => [...prev, {
-      role: 'assistant',
-      content: `❌ Payment failed: ${error.message}. Please try again.`
-    }]);
   };
 
   const sendMessage = async (e: React.FormEvent) => {
@@ -122,7 +113,7 @@ export function ChatbotBubble() {
             <div className="bg-blue-600 text-white p-4 rounded-t-lg flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MessageCircle className="w-5 h-5" />
-                <h3 className="font-semibold">Shoe Shopping Assistant</h3>
+                <h3 className="font-semibold">Shopping Assistant</h3>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
@@ -137,7 +128,7 @@ export function ChatbotBubble() {
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {messages.length === 0 && (
                 <div className="text-center text-gray-500 mt-8">
-                  <p className="text-sm">Hi! Looking for shoes? Ask me anything!</p>
+                  <p className="text-sm">Hi! Looking for something? Ask me anything!</p>
                 </div>
               )}
 
@@ -148,8 +139,8 @@ export function ChatbotBubble() {
                   >
                     <div
                       className={`max-w-[80%] rounded-lg p-3 ${msg.role === 'user'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-900'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-900'
                         }`}
                     >
                       <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
