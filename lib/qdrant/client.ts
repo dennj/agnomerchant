@@ -24,10 +24,11 @@ export async function getCollectionInfo() {
   try {
     const qdrant = createQdrantClient();
     const collection = await qdrant.getCollection(COLLECTION_NAME);
+    const vectors = collection.config.params.vectors as any;
     return {
       name: COLLECTION_NAME,
       pointsCount: collection.points_count,
-      vectorSize: collection.config.params.vectors?.[VECTOR_NAME]?.size || VECTOR_SIZE,
+      vectorSize: vectors?.[VECTOR_NAME]?.size || VECTOR_SIZE,
     };
   } catch (error) {
     console.error('Error getting collection info:', error);

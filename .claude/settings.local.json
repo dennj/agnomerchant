@@ -4,7 +4,8 @@
       "Bash(npx shadcn@latest init:*)",
       "Bash(npx shadcn@latest add --all)",
       "Bash(kill:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(pnpm build:*)"
     ],
     "deny": [],
     "ask": []

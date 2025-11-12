@@ -38,7 +38,7 @@ export function ProductCard({ product, onOrderCreated }: ProductCardProps) {
     onSuccess: (order) => {
       // Order has uuid property, not id
       const orderId = order.id;
-      onOrderCreated?.(orderId);
+      onOrderCreated?.({ orderId });
     },
     onError: (error) => {
       alert(`Failed to create order: ${error.message}`);
