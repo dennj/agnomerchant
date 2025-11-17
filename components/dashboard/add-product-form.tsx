@@ -14,9 +14,10 @@ interface AddProductFormProps {
   onSuccess: () => void;
   initialProduct?: Product | null;
   onCancelEdit?: () => void;
+  accountId: string;
 }
 
-export function AddProductForm({ onSuccess, initialProduct, onCancelEdit }: AddProductFormProps) {
+export function AddProductForm({ onSuccess, initialProduct, onCancelEdit, accountId }: AddProductFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -63,7 +64,7 @@ export function AddProductForm({ onSuccess, initialProduct, onCancelEdit }: AddP
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/products', {
+      const response = await fetch(`/api/products?accountId=${accountId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

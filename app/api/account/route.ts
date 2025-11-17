@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getAccountId } from '@/lib/utils/account';
+import { getAllAccounts } from '@/lib/utils/account';
 
 export async function GET() {
   try {
@@ -14,17 +14,9 @@ export async function GET() {
       );
     }
 
-    const accountId = await getAccountId(user.id);
-
-    if (!accountId) {
-      return NextResponse.json(
-        { error: 'User not associated with any account' },
-        { status: 403 }
-      );
-    }
-
+    const accounts = await getAllAccounts(user.id);
     return NextResponse.json({
-      accountId,
+      accounts,
       userId: user.id,
     });
   } catch (error) {

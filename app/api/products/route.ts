@@ -3,7 +3,6 @@ import OpenAI from 'openai';
 import { createClient } from '@/lib/supabase/server';
 import { addProduct, getAllProducts, getCollectionInfo, findProductBySKU, updateProduct, deleteProduct } from '@/lib/qdrant/client';
 import { CreateProductInput } from '@/lib/types/product';
-import { getAccountId } from '@/lib/utils/account';
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -27,6 +26,17 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
+      );
+    }
+
+    // Parse query parameters
+    const { searchParams } = new URL(req.url);
+    const accountId = searchParams.get('accountId');
+
+    if (!accountId) {
+      return NextResponse.json(
+        { error: 'accountId query parameter is required' },
+        { status: 400 }
       );
     }
 
@@ -57,15 +67,6 @@ export async function POST(req: Request) {
     });
 
     const embedding = embeddingResult.data[0].embedding;
-
-    // Get account_id from pivot table
-    const accountId = await getAccountId(user.id);
-    if (!accountId) {
-      return NextResponse.json(
-        { error: 'User not associated with any account' },
-        { status: 403 }
-      );
-    }
 
     // Check if a product with this SKU already exists
     let result;
@@ -117,14 +118,12 @@ export async function GET(req: Request) {
     // Parse query parameters
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get('limit') || '100');
-
-    // Get account_id from pivot table
-    const accountId = await getAccountId(user.id);
+    const accountId = searchParams.get('accountId');
 
     if (!accountId) {
       return NextResponse.json(
-        { error: 'User not associated with any account' },
-        { status: 403 }
+        { error: 'accountId query parameter is required' },
+        { status: 400 }
       );
     }
 

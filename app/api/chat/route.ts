@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { QdrantClient } from '@qdrant/js-client-rest';
-import { createClient } from '@/lib/supabase/server';
 import { getAllProducts } from '@/lib/qdrant/client';
 import { Product } from '@/lib/types/product';
-import { getAccountId } from '@/lib/utils/account';
 
 // Fail fast: Check API keys at module level
 const openaiKey = process.env.OPENAI_API_KEY;
@@ -88,32 +86,19 @@ export async function POST(req: Request) {
   }
 
   try {
-    // Check authentication
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Get account_id from pivot table
-    const accountId = await getAccountId(user.id);
-    if (!accountId) {
-      return NextResponse.json(
-        { error: 'User not associated with any account' },
-        { status: 403 }
-      );
-    }
-
-    const { messages } = await req.json();
+    const { messages, accountId } = await req.json();
 
     // Fail fast: Validate input
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
         { error: 'Invalid messages format' },
+        { status: 400 }
+      );
+    }
+
+    if (!accountId) {
+      return NextResponse.json(
+        { error: 'accountId is required' },
         { status: 400 }
       );
     }
