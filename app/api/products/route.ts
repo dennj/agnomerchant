@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import { createClient } from '@/lib/supabase/server';
 import { addProduct, getAllProducts, getCollectionInfo, findProductBySKU, updateProduct, deleteProduct } from '@/lib/qdrant/client';
 import { CreateProductInput } from '@/lib/types/product';
+import { getAccountId } from '@/lib/utils/account';
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -57,27 +58,33 @@ export async function POST(req: Request) {
 
     const embedding = embeddingResult.data[0].embedding;
 
-    // Add product to Qdrant with merchant_id
-    const merchantId = user.id;
+    // Get account_id from pivot table
+    const accountId = await getAccountId(user.id);
+    if (!accountId) {
+      return NextResponse.json(
+        { error: 'User not associated with any account' },
+        { status: 403 }
+      );
+    }
 
     // Check if a product with this SKU already exists
     let result;
     let isUpdate = false;
 
     if (product.sku) {
-      const existingProduct = await findProductBySKU(merchantId, product.sku);
+      const existingProduct = await findProductBySKU(accountId, product.sku);
 
       if (existingProduct) {
         // Product with this SKU exists - update it
-        result = await updateProduct(existingProduct.id, merchantId, product, embedding);
+        result = await updateProduct(existingProduct.id, accountId, product, embedding);
         isUpdate = true;
       } else {
         // No conflict - create new product
-        result = await addProduct(merchantId, product, embedding);
+        result = await addProduct(accountId, product, embedding);
       }
     } else {
       // No SKU provided - create new product
-      result = await addProduct(merchantId, product, embedding);
+      result = await addProduct(accountId, product, embedding);
     }
 
     return NextResponse.json({
@@ -111,12 +118,21 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get('limit') || '100');
 
+    // Get account_id from pivot table
+    const accountId = await getAccountId(user.id);
+
+    if (!accountId) {
+      return NextResponse.json(
+        { error: 'User not associated with any account' },
+        { status: 403 }
+      );
+    }
+
     // Get collection info
     const collectionInfo = await getCollectionInfo();
 
-    // Get products for this merchant only
-    const merchantId = user.id;
-    const products = await getAllProducts(merchantId, limit);
+    // Get products for this account only
+    const products = await getAllProducts(accountId, limit);
 
     return NextResponse.json({
       success: true,

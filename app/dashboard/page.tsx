@@ -5,11 +5,9 @@ import { CatalogPreview } from '@/components/dashboard/catalog-preview';
 import { AddProductForm } from '@/components/dashboard/add-product-form';
 import { Product } from '@/lib/types/product';
 import { Loader2 } from 'lucide-react';
-import { useAuth } from '@/lib/contexts/auth-context';
 import { Badge } from '@/components/ui/badge';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [collectionInfo, setCollectionInfo] = useState({
     name: 'agnopay',
@@ -17,6 +15,7 @@ export default function DashboardPage() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [accountId, setAccountId] = useState<string>('');
 
   const fetchProducts = async () => {
     try {
@@ -24,7 +23,8 @@ export default function DashboardPage() {
       const response = await fetch('/api/products');
 
       if (!response.ok) {
-        throw new Error('Failed to fetch products');
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to fetch products');
       }
 
       const data = await response.json();
@@ -37,7 +37,20 @@ export default function DashboardPage() {
     }
   };
 
+  const fetchAccountId = async () => {
+    try {
+      const response = await fetch('/api/account');
+      if (response.ok) {
+        const data = await response.json();
+        setAccountId(data.accountId);
+      }
+    } catch (error) {
+      console.error('Error fetching account ID:', error);
+    }
+  };
+
   useEffect(() => {
+    fetchAccountId();
     fetchProducts();
   }, []);
 
@@ -104,11 +117,11 @@ export default function DashboardPage() {
         <p className="text-gray-600 mt-2">
           Manage your product catalog. Products are automatically indexed for AI-powered search.
         </p>
-        {user && (
+        {accountId && (
           <div className="mt-3 flex items-center gap-2">
-            <span className="text-sm text-gray-500">Merchant ID:</span>
+            <span className="text-sm text-gray-500">Account ID:</span>
             <Badge variant="outline" className="font-mono text-xs">
-              {user.id}
+              {accountId}
             </Badge>
           </div>
         )}

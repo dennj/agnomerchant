@@ -4,6 +4,7 @@ import { QdrantClient } from '@qdrant/js-client-rest';
 import { createClient } from '@/lib/supabase/server';
 import { getAllProducts } from '@/lib/qdrant/client';
 import { Product } from '@/lib/types/product';
+import { getAccountId } from '@/lib/utils/account';
 
 // Fail fast: Check API keys at module level
 const openaiKey = process.env.OPENAI_API_KEY;
@@ -19,7 +20,7 @@ const qdrant = (qdrantUrl && qdrantKey)
   ? new QdrantClient({ url: qdrantUrl, apiKey: qdrantKey })
   : null;
 
-async function searchProducts(merchantId: string, query: string) {
+async function searchProducts(accountId: string, query: string) {
   if (!openai || !qdrant) return null;
 
   try {
@@ -32,7 +33,7 @@ async function searchProducts(merchantId: string, query: string) {
 
     const vector = embedding.data[0].embedding;
 
-    // Search Qdrant using named vector "text" with merchant filter
+    // Search Qdrant using named vector "text" with account filter
     const searchResult = await qdrant.search('agnopay', {
       vector: {
         name: 'text',
@@ -42,7 +43,7 @@ async function searchProducts(merchantId: string, query: string) {
       with_payload: true,
       filter: {
         must: [
-          { key: 'merchant_id', match: { value: merchantId } }
+          { key: 'merchant_id', match: { value: accountId } } //TODO merchant_id is saved in qdrant but should be replaced by account_id for consistency or accounts table shoud be renamed to merchants
         ]
       }
     });
@@ -98,7 +99,14 @@ export async function POST(req: Request) {
       );
     }
 
-    const merchantId = user.id;
+    // Get account_id from pivot table
+    const accountId = await getAccountId(user.id);
+    if (!accountId) {
+      return NextResponse.json(
+        { error: 'User not associated with any account' },
+        { status: 403 }
+      );
+    }
 
     const { messages } = await req.json();
 
@@ -113,7 +121,7 @@ export async function POST(req: Request) {
     // Fetch all products for catalog overview (once per conversation)
     let allProducts: Partial<Product>[] = [];
     try {
-      allProducts = await getAllProducts(merchantId, 100);
+      allProducts = await getAllProducts(accountId, 100);
     } catch (error) {
       console.error('Failed to load catalog:', error);
     }
@@ -156,16 +164,16 @@ When a user asks about specific products, courses, or events, use the search_pro
         const searchQuery = args.query;
 
         // Execute the search
-        const products = await searchProducts(merchantId, searchQuery);
+        const products = await searchProducts(accountId, searchQuery);
 
         // Create function result message
         const functionResult = products && products.length > 0
           ? `Found ${products.length} relevant items:\n${products.map((p: Record<string, unknown>, i: number) => {
-              const name = (p.product_name || p.Name) as string;
-              const price = Number(p.price) / 100;
-              const desc = (p.Short_description || (p.Description as string)?.substring(0, 100)) as string;
-              return `${i + 1}. ${name} - R$ ${price.toFixed(2)} - ${desc}`;
-            }).join('\n')}`
+            const name = (p.product_name || p.Name) as string;
+            const price = Number(p.price) / 100;
+            const desc = (p.Short_description || (p.Description as string)?.substring(0, 100)) as string;
+            return `${i + 1}. ${name} - R$ ${price.toFixed(2)} - ${desc}`;
+          }).join('\n')}`
           : 'No matching products found in the catalog.';
 
         // Call LLM again with function result
