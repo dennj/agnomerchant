@@ -8,7 +8,7 @@ export default function ProductPage() {
   const { createOrder, isLoading } = useAgnoPayCheckout({
     onSuccess: (order) => {
       // Redirect to checkout page with iframe
-      router.push(`/checkout/${order.id}`);
+      router.push(`/checkout/${order.uuid}`);
     },
     onError: (error) => {
       alert(error.message || 'Failed to start checkout');

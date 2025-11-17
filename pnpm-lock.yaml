@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@agnopay/sdk':
         specifier: github:dennj/agnopay-sdk
-        version: https://codeload.github.com/dennj/agnopay-sdk/tar.gz/1b6215971b4089631b680f4457d6fb22e52b61a7(next@16.0.1(@babel/core@7.28.5)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+        version: https://codeload.github.com/dennj/agnopay-sdk/tar.gz/150f19c6e175c7454a48849dc272648906e8aa0d(next@16.0.1(@babel/core@7.28.5)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.66.0(react@19.2.0))
@@ -198,8 +198,8 @@ importers:
 
 packages:
 
-  '@agnopay/sdk@https://codeload.github.com/dennj/agnopay-sdk/tar.gz/1b6215971b4089631b680f4457d6fb22e52b61a7':
-    resolution: {tarball: https://codeload.github.com/dennj/agnopay-sdk/tar.gz/1b6215971b4089631b680f4457d6fb22e52b61a7}
+  '@agnopay/sdk@https://codeload.github.com/dennj/agnopay-sdk/tar.gz/150f19c6e175c7454a48849dc272648906e8aa0d':
+    resolution: {tarball: https://codeload.github.com/dennj/agnopay-sdk/tar.gz/150f19c6e175c7454a48849dc272648906e8aa0d}
     version: 0.1.1
     engines: {node: '>=16.0.0'}
     peerDependencies:
@@ -1874,8 +1874,8 @@ packages:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
     engines: {node: '>= 0.4'}
 
-  electron-to-chromium@1.5.254:
-    resolution: {integrity: sha512-DcUsWpVhv9svsKRxnSCZ86SjD+sp32SGidNB37KpqXJncp1mfUgKbHvBomE89WJDbfVKw1mdv5+ikrvd43r+Bg==}
+  electron-to-chromium@1.5.255:
+    resolution: {integrity: sha512-Z9oIp4HrFF/cZkDPMpz2XSuVpc1THDpT4dlmATFlJUIBVCy9Vap5/rIXsASP1CscBacBqhabwh8vLctqBwEerQ==}
 
   embla-carousel-react@8.6.0:
     resolution: {integrity: sha512-0/PjqU7geVmo6F734pmPqpyHqiM99olvyecY7zdweCw+6tKEXnrE90pBiBbMMU8s5tICemzpQ3hi5EpxzGW+JA==}
@@ -3131,7 +3131,7 @@ packages:
 
 snapshots:
 
-  '@agnopay/sdk@https://codeload.github.com/dennj/agnopay-sdk/tar.gz/1b6215971b4089631b680f4457d6fb22e52b61a7(next@16.0.1(@babel/core@7.28.5)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
+  '@agnopay/sdk@https://codeload.github.com/dennj/agnopay-sdk/tar.gz/150f19c6e175c7454a48849dc272648906e8aa0d(next@16.0.1(@babel/core@7.28.5)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
     optionalDependencies:
       next: 16.0.1(@babel/core@7.28.5)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       react: 19.2.0
@@ -4637,7 +4637,7 @@ snapshots:
     dependencies:
       baseline-browser-mapping: 2.8.29
       caniuse-lite: 1.0.30001755
-      electron-to-chromium: 1.5.254
+      electron-to-chromium: 1.5.255
       node-releases: 2.0.27
       update-browserslist-db: 1.1.4(browserslist@4.28.0)
 
@@ -4816,7 +4816,7 @@ snapshots:
       es-errors: 1.3.0
       gopd: 1.2.0
 
-  electron-to-chromium@1.5.254: {}
+  electron-to-chromium@1.5.255: {}
 
   embla-carousel-react@8.6.0(react@19.2.0):
     dependencies:

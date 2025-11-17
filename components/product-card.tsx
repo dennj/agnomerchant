@@ -36,7 +36,7 @@ export function ProductCard({ product, onOrderCreated }: ProductCardProps) {
 
   const { createOrder, isLoading, error: sdkError } = useAgnoPayCheckout({
     onSuccess: (order) => {
-      const orderId = order.uuid
+      const orderId = order.uuid;
       onOrderCreated?.({ orderId });
     },
     onError: (error) => {
