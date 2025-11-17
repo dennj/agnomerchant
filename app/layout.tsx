@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ChatbotBubble } from "@/components/chatbot-bubble";
+import { ChatbotBubble } from "@/components/chatbot-fullscreen";
 import { AuthProvider } from "@/lib/contexts/auth-context";
 import { Toaster } from "sonner";
 
