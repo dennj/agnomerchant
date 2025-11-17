@@ -31,6 +31,7 @@ export function ChatbotBubble() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [checkoutOrderId, setCheckoutOrderId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -39,6 +40,13 @@ export function ChatbotBubble() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    // Auto-focus input when chat opens or when loading completes
+    if (isOpen && !isCheckoutOpen) {
+      inputRef.current?.focus();
+    }
+  }, [isOpen, isLoading, isCheckoutOpen]);
 
   const handleOrderCreated = (payment: { orderId: string }) => {
     setCheckoutOrderId(payment.orderId);
@@ -94,41 +102,39 @@ export function ChatbotBubble() {
 
   return (
     <>
-      {/* Chat Bubble Button */}
+      {/* Chat Widget Button */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all hover:scale-110 z-50"
+          className="fixed bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 bg-gray-50 hover:bg-zinc-100 text-gray-700 border border-emerald-500 rounded-full px-6 sm:px-20 py-3 sm:py-4 shadow-md hover:shadow-lg transition-all z-50 flex items-center gap-2 sm:gap-3 max-w-[calc(100vw-2rem)]"
           aria-label="Open chat"
         >
-          <MessageCircle className="w-6 h-6" />
+          <MessageCircle className="w-4 h-4 text-gray-600 flex-shrink-0" />
+          <span className="font-normal text-xs sm:text-sm whitespace-nowrap">Dúvidas? Escreva aqui</span>
         </button>
       )}
 
-      {/* Chat Window */}
+      {/* Chat Window - Centered Modal */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 w-[500px] h-[600px] z-50">
-          <div className="relative w-full h-full bg-white rounded-lg shadow-2xl flex flex-col border border-gray-200">
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-end px-4 sm:px-6 pb-6 sm:pb-8 pt-20 bg-black/30 backdrop-blur-sm gap-6">
+          <div className="relative w-full max-w-2xl h-full max-h-[700px] bg-white rounded-2xl shadow-2xl flex flex-col">
             {/* Header */}
-            <div className="bg-blue-600 text-white p-4 rounded-t-lg flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MessageCircle className="w-5 h-5" />
-                <h3 className="font-semibold">Shopping Assistant</h3>
+            <div className="bg-white px-6 py-5 rounded-t-2xl flex items-center border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full p-2">
+                  <MessageCircle className="w-5 h-5 text-white" />
+                </div>
+                <h3 className="font-semibold text-gray-900">Assistente IA</h3>
               </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="hover:bg-blue-700 rounded p-1 transition-colors"
-                aria-label="Close chat"
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/30">
               {messages.length === 0 && (
-                <div className="text-center text-gray-500 mt-8">
-                  <p className="text-sm">Hi! Looking for something? Ask me anything!</p>
+                <div className="flex justify-start">
+                  <div className="max-w-[80%] rounded-2xl p-4 bg-white shadow-sm border border-gray-100">
+                    <p className="text-sm text-gray-700">Oi! Estou aqui para ajudar com vendas e suporte.</p>
+                  </div>
                 </div>
               )}
 
@@ -138,9 +144,9 @@ export function ChatbotBubble() {
                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-lg p-3 ${msg.role === 'user'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-900'
+                      className={`max-w-[80%] rounded-2xl p-4 ${msg.role === 'user'
+                        ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-md'
+                        : 'bg-white text-gray-700 shadow-sm border border-gray-100'
                         }`}
                     >
                       <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
@@ -164,14 +170,14 @@ export function ChatbotBubble() {
 
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-gray-100 rounded-lg p-3">
-                    <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
+                  <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                    <Loader2 className="w-5 h-5 animate-spin text-emerald-500" />
                   </div>
                 </div>
               )}
 
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <div className="bg-red-50 border border-red-200 rounded-2xl p-4 shadow-sm">
                   <p className="text-sm text-red-600">{error}</p>
                 </div>
               )}
@@ -180,53 +186,56 @@ export function ChatbotBubble() {
             </div>
 
             {/* Input Form */}
-            <form onSubmit={sendMessage} className="p-4 border-t border-gray-200">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Type your message..."
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  disabled={isLoading}
-                />
-                <button
-                  type="submit"
-                  disabled={isLoading || !input.trim()}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2 transition-colors"
-                  aria-label="Send message"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
-            </form>
+            <div className="bg-white border-t border-gray-100 px-6 py-5 rounded-b-2xl">
+              <form onSubmit={sendMessage}>
+                <div className="flex gap-3 items-center">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Type your message..."
+                    className="flex-1 px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white text-sm text-gray-900 placeholder:text-gray-400 transition-all"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="submit"
+                    disabled={isLoading || !input.trim()}
+                    className="bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-gray-200 disabled:to-gray-300 disabled:cursor-not-allowed text-white rounded-full p-3.5 transition-all shadow-md hover:shadow-lg flex items-center justify-center"
+                    aria-label="Send message"
+                  >
+                    <Send className="w-5 h-5" />
+                  </button>
+                </div>
+              </form>
+            </div>
 
             {/* Checkout Modal - Inside Chatbot */}
             {isCheckoutOpen && checkoutOrderId && (
               <>
                 {/* Modal Overlay */}
                 <div
-                  className="absolute inset-0 bg-black/50 z-10 rounded-lg"
+                  className="absolute inset-0 bg-black/30 backdrop-blur-sm z-10 rounded-2xl"
                   onClick={() => setIsCheckoutOpen(false)}
                 />
 
                 {/* Modal Content */}
-                <div className="absolute inset-4 bg-white rounded-lg shadow-2xl z-20 flex flex-col overflow-hidden">
+                <div className="absolute inset-4 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl z-20 flex flex-col overflow-hidden border border-white/50">
                   {/* Modal Header */}
-                  <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-blue-600">
-                    <h3 className="text-base font-semibold text-white">
+                  <div className="flex items-center justify-between p-4 border-b border-gray-200/50 bg-white/50 backdrop-blur-lg">
+                    <h3 className="text-base font-semibold text-gray-800">
                       Complete Your Purchase
                     </h3>
                     <button
                       onClick={() => setIsCheckoutOpen(false)}
-                      className="text-white hover:bg-blue-700 rounded p-1 transition-colors"
+                      className="text-gray-600 hover:bg-gray-100/50 rounded-full p-1 transition-colors"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
 
                   {/* Checkout Content */}
-                  <div className="flex-1 overflow-hidden">
+                  <div className="flex-1 overflow-y-auto overflow-x-hidden">
                     <AgnoPayCheckout
                       orderId={checkoutOrderId}
                       onSuccess={handleCheckoutSuccess}
@@ -245,6 +254,15 @@ export function ChatbotBubble() {
               </>
             )}
           </div>
+
+          {/* Floating X Button */}
+          <button
+            onClick={() => setIsOpen(false)}
+            className="bg-white hover:bg-gray-100 rounded-full p-5 shadow-lg transition-all"
+            aria-label="Close chat"
+          >
+            <X className="w-8 h-8 text-gray-600" />
+          </button>
         </div>
       )}
     </>
