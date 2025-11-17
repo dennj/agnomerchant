@@ -31,6 +31,7 @@ export function ChatbotBubble() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [checkoutOrderId, setCheckoutOrderId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -39,6 +40,13 @@ export function ChatbotBubble() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    // Auto-focus input when chat opens or when loading completes
+    if (isOpen && !isCheckoutOpen) {
+      inputRef.current?.focus();
+    }
+  }, [isOpen, isLoading, isCheckoutOpen]);
 
   const handleOrderCreated = (payment: { orderId: string }) => {
     setCheckoutOrderId(payment.orderId);
@@ -188,6 +196,7 @@ export function ChatbotBubble() {
             <form onSubmit={sendMessage} className="max-w-3xl mx-auto">
               <div className="flex gap-3">
                 <input
+                  ref={inputRef}
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
