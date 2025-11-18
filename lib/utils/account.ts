@@ -41,3 +41,26 @@ export async function getAccountPrompt(accountId: string): Promise<string> {
     return '';
   }
 }
+
+export async function getAccountChatbotSettings(accountId: string): Promise<{ isFullscreen: boolean }> {
+  try {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .schema('agnopay')
+      .from('accounts')
+      .select('ai_fullscreen')
+      .eq('id', accountId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching chatbot settings:', error);
+      return { isFullscreen: false };
+    }
+
+    return { isFullscreen: data?.ai_fullscreen || false };
+  } catch (error) {
+    console.error('Failed to fetch chatbot settings:', error);
+    return { isFullscreen: false };
+  }
+}

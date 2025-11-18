@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useState } from 'react';
-import { ChatbotBubble } from '@/components/chatbot-bubble';
+import { Chatbot } from '@/components/chatbot';
 
 export default function SharkTankSchoolPage() {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -643,7 +643,7 @@ export default function SharkTankSchoolPage() {
       {/* Google Tag Manager & Facebook Pixel Scripts would go in layout.tsx or a separate component */}
 
       {/* Chatbot */}
-      <ChatbotBubble accountId="68cd2237-0d9e-462b-bb00-f407eff2edad" />
+      <Chatbot accountId="68cd2237-0d9e-462b-bb00-f407eff2edad" />
     </div>
   );
 }

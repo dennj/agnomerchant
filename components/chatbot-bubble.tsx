@@ -4,23 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
 import { ProductCard } from './product-card';
 import { AgnoPayCheckout } from '@agnopay/sdk';
-
-interface Product {
-  id: string;
-  product_name?: string;
-  Name?: string;
-  price?: number;
-  image_url?: string;
-  Short_description?: string;
-  Description?: string;
-  SKU?: string;
-}
-
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-  products?: Product[];
-}
+import { useChatbot } from '@/hooks/useChatbot';
 
 interface ChatbotBubbleProps {
   accountId: string;
@@ -28,22 +12,22 @@ interface ChatbotBubbleProps {
 
 export function ChatbotBubble({ accountId }: ChatbotBubbleProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [checkoutOrderId, setCheckoutOrderId] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  const {
+    messages,
+    input,
+    setInput,
+    isLoading,
+    error,
+    isCheckoutOpen,
+    setIsCheckoutOpen,
+    checkoutOrderId,
+    messagesEndRef,
+    sendMessage,
+    handleCheckoutSuccess,
+    handleCheckoutError,
+  } = useChatbot(accountId);
 
   useEffect(() => {
     // Auto-focus input when chat opens or when loading completes
@@ -52,60 +36,7 @@ export function ChatbotBubble({ accountId }: ChatbotBubbleProps) {
     }
   }, [isOpen, isLoading, isCheckoutOpen]);
 
-  const handleOrderCreated = (payment: { orderId: string }) => {
-    setCheckoutOrderId(payment.orderId);
-    setIsCheckoutOpen(true);
-  };
-
-  const handleCheckoutSuccess = () => {
-    setIsCheckoutOpen(false);
-    setCheckoutOrderId(null);
-    // Could add success message to chat here
-  };
-
-  const handleCheckoutError = (error: Error) => {
-    console.error('Checkout error:', error);
-    setError(`Payment failed: ${error.message}`);
-    setIsCheckoutOpen(false);
-  };
-
-  const sendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    const userMessage: Message = { role: 'user', content: input.trim() };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [...messages, userMessage],
-          accountId
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to get response');
-      }
-
-      const data = await res.json();
-      setMessages((prev) => [...prev, {
-        role: 'assistant',
-        content: data.reply,
-        products: data.products || undefined
-      }]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const handleOrderCreated = () => setIsCheckoutOpen(true);
 
   return (
     <>
@@ -123,8 +54,14 @@ export function ChatbotBubble({ accountId }: ChatbotBubbleProps) {
 
       {/* Chat Window - Centered Modal */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-end px-4 sm:px-6 pb-6 sm:pb-8 pt-20 bg-black/30 backdrop-blur-sm gap-6">
-          <div className="relative w-full max-w-2xl h-full max-h-[700px] bg-white rounded-2xl shadow-2xl flex flex-col">
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-end px-4 sm:px-6 pb-6 sm:pb-8 pt-20 bg-black/30 backdrop-blur-sm gap-6"
+          onClick={() => setIsOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-2xl h-full max-h-[700px] bg-white rounded-2xl shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="bg-white px-6 py-5 rounded-t-2xl flex items-center border-b border-gray-100">
               <div className="flex items-center gap-3">

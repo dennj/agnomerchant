@@ -4,42 +4,30 @@ import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
 import { ProductCard } from './product-card';
 import { AgnoPayCheckout } from '@agnopay/sdk';
+import { useChatbot } from '@/hooks/useChatbot';
 
-interface Product {
-  id: string;
-  product_name?: string;
-  Name?: string;
-  price?: number;
-  image_url?: string;
-  Short_description?: string;
-  Description?: string;
-  SKU?: string;
+interface ChatbotFullscreenProps {
+  accountId: string;
 }
 
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-  products?: Product[];
-}
-
-export function ChatbotBubble() {
+export function ChatbotFullscreen({ accountId }: ChatbotFullscreenProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [checkoutOrderId, setCheckoutOrderId] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  const {
+    messages,
+    input,
+    setInput,
+    isLoading,
+    error,
+    isCheckoutOpen,
+    setIsCheckoutOpen,
+    checkoutOrderId,
+    messagesEndRef,
+    sendMessage,
+    handleCheckoutSuccess,
+    handleCheckoutError,
+  } = useChatbot(accountId);
 
   useEffect(() => {
     // Auto-focus input when chat opens or when loading completes
@@ -48,57 +36,7 @@ export function ChatbotBubble() {
     }
   }, [isOpen, isLoading, isCheckoutOpen]);
 
-  const handleOrderCreated = (payment: { orderId: string }) => {
-    setCheckoutOrderId(payment.orderId);
-    setIsCheckoutOpen(true);
-  };
-
-  const handleCheckoutSuccess = () => {
-    setIsCheckoutOpen(false);
-    setCheckoutOrderId(null);
-    // Could add success message to chat here
-  };
-
-  const handleCheckoutError = (error: Error) => {
-    console.error('Checkout error:', error);
-    setError(`Payment failed: ${error.message}`);
-    setIsCheckoutOpen(false);
-  };
-
-  const sendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    const userMessage: Message = { role: 'user', content: input.trim() };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [...messages, userMessage] }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to get response');
-      }
-
-      const data = await res.json();
-      setMessages((prev) => [...prev, {
-        role: 'assistant',
-        content: data.reply,
-        products: data.products || undefined
-      }]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const handleOrderCreated = () => setIsCheckoutOpen(true);
 
   return (
     <>

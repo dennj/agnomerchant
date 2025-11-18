@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { QdrantClient } from '@qdrant/js-client-rest';
-import { getAllProducts } from '@/lib/qdrant/client';
+import { getAllProducts, findProductBySKU } from '@/lib/qdrant/client';
 import { Product } from '@/lib/types/product';
 import { getAccountPrompt } from '@/lib/utils/account';
 
@@ -77,6 +77,29 @@ const searchProductsTool = {
   },
 };
 
+// Define the function tool for detecting buy intent
+const createOrderIntentTool = {
+  type: 'function' as const,
+  function: {
+    name: 'create_order_intent',
+    description: 'Detect when the user expresses intent to purchase or buy a product. Use this when the user says phrases like "I want to buy", "I\'ll take it", "purchase this", "add to cart", "I want this one", "let me get", etc. The product should have been mentioned or shown in the conversation.',
+    parameters: {
+      type: 'object',
+      properties: {
+        product_identifier: {
+          type: 'string',
+          description: 'The SKU code or exact product name that the user wants to buy. Use SKU if available from previous search results.',
+        },
+        quantity: {
+          type: 'number',
+          description: 'The quantity the user wants to purchase. Default to 1 if not specified.',
+        },
+      },
+      required: ['product_identifier'],
+    },
+  },
+};
+
 export async function POST(req: Request) {
   // Fail fast: Check OpenAI client
   if (!openai) {
@@ -131,7 +154,7 @@ export async function POST(req: Request) {
           { role: 'system', content: systemMessage },
           ...messages
         ],
-        tools: [searchProductsTool],
+        tools: [searchProductsTool, createOrderIntentTool],
         tool_choice: 'auto',
         max_tokens: 500,
       }),
@@ -189,6 +212,26 @@ export async function POST(req: Request) {
         }
 
         return NextResponse.json({ reply, products });
+      }
+
+      if (toolCall.type === 'function' && toolCall.function.name === 'create_order_intent') {
+        const args = JSON.parse(toolCall.function.arguments);
+        const product = await findProductBySKU(accountId, args.product_identifier);
+
+        if (!product) {
+          return NextResponse.json(
+            { error: `Product "${args.product_identifier}" not found` },
+            { status: 404 }
+          );
+        }
+
+        return NextResponse.json({
+          reply: '',
+          buy_intent: {
+            product,
+            quantity: args.quantity || 1
+          }
+        });
       }
     }
 
