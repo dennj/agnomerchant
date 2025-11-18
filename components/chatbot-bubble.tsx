@@ -24,6 +24,7 @@ export function ChatbotBubble({ accountId }: ChatbotBubbleProps) {
     isCheckoutOpen,
     setIsCheckoutOpen,
     checkoutOrderId,
+    createOrder,
     messagesEndRef,
     sendMessage,
     handleCheckoutSuccess,
@@ -36,8 +37,6 @@ export function ChatbotBubble({ accountId }: ChatbotBubbleProps) {
       inputRef.current?.focus();
     }
   }, [isOpen, isLoading, isCheckoutOpen]);
-
-  const handleOrderCreated = () => setIsCheckoutOpen(true);
 
   return (
     <>
@@ -98,7 +97,7 @@ export function ChatbotBubble({ accountId }: ChatbotBubbleProps) {
                         <ProductCard
                           key={product.id}
                           product={product}
-                          onOrderCreated={handleOrderCreated}
+                          createOrder={createOrder}
                         />
                       ))}
                     </div>

@@ -28,6 +28,7 @@ export function useChatbot(accountId: string) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { createOrder } = useAgnoPayCheckout({
+    publishableKey: process.env.NEXT_PUBLIC_AGNOPAY_KEY,
     onSuccess: (order) => {
       setCheckoutOrderId(order.uuid);
       setIsCheckoutOpen(true);
@@ -96,14 +97,15 @@ export function useChatbot(accountId: string) {
       if (data.buy_intent?.product) {
         const { product, quantity } = data.buy_intent;
         try {
-          await createOrder({
+          const orderData = {
             line_items: [{
               code: product.SKU!,
               description: product.product_name || product.Name!,
               amount: product.price!,
               quantity: quantity || 1,
             }],
-          });
+          };
+          await createOrder(orderData);
         } catch (orderErr) {
           setError(orderErr instanceof Error ? orderErr.message : 'Failed to create order');
         }
@@ -124,6 +126,7 @@ export function useChatbot(accountId: string) {
     isCheckoutOpen,
     setIsCheckoutOpen,
     checkoutOrderId,
+    createOrder,
     messagesEndRef,
     sendMessage,
     handleCheckoutSuccess,

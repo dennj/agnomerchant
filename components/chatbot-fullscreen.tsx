@@ -24,6 +24,7 @@ export function ChatbotFullscreen({ accountId }: ChatbotFullscreenProps) {
     isCheckoutOpen,
     setIsCheckoutOpen,
     checkoutOrderId,
+    createOrder,
     messagesEndRef,
     sendMessage,
     handleCheckoutSuccess,
@@ -36,8 +37,6 @@ export function ChatbotFullscreen({ accountId }: ChatbotFullscreenProps) {
       inputRef.current?.focus();
     }
   }, [isOpen, isLoading, isCheckoutOpen]);
-
-  const handleOrderCreated = () => setIsCheckoutOpen(true);
 
   return (
     <>
@@ -97,7 +96,7 @@ export function ChatbotFullscreen({ accountId }: ChatbotFullscreenProps) {
                         <ProductCard
                           key={product.id}
                           product={product}
-                          onOrderCreated={handleOrderCreated}
+                          createOrder={createOrder}
                         />
                       ))}
                     </div>

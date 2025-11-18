@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { ShoppingCart, Loader2 } from 'lucide-react';
-import { useAgnoPayCheckout } from '@agnopay/sdk';
 import {
   Dialog,
   DialogContent,
@@ -10,6 +9,15 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+
+interface OrderData {
+  line_items: Array<{
+    code: string;
+    description: string;
+    amount: number;
+    quantity: number;
+  }>;
+}
 
 interface ProductCardProps {
   product: {
@@ -21,11 +29,12 @@ interface ProductCardProps {
     Description?: string;
     SKU?: string;
   };
-  onOrderCreated?: (payment: { orderId: string }) => void;
+  createOrder: (orderData: OrderData) => Promise<unknown>;
 }
 
-export function ProductCard({ product, onOrderCreated }: ProductCardProps) {
+export function ProductCard({ product, createOrder }: ProductCardProps) {
   const [showModal, setShowModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const name = product.product_name || product.Name;
   const description = product.Short_description || product.Description?.substring(0, 80) + '...';
@@ -34,30 +43,25 @@ export function ProductCard({ product, onOrderCreated }: ProductCardProps) {
   const price = product.price;
   const sku = product.SKU;
 
-  const { createOrder, isLoading, error: sdkError } = useAgnoPayCheckout({
-    onSuccess: (order) => {
-      const orderId = order.uuid;
-      onOrderCreated?.({ orderId });
-    },
-    onError: (error) => {
-      alert(`Failed to create order: ${error.message}`);
-    },
-  });
-
   const handleBuyNow = async () => {
+    setIsLoading(true);
     try {
-      await createOrder({
+      const orderData: OrderData = {
         line_items: [
           {
             code: sku!,
             description: name!,
-            amount: price!, // Already in cents
+            amount: price!,
             quantity: 1,
           },
         ],
-      });
+      };
+
+      await createOrder(orderData);
     } catch (err) {
       alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -85,13 +89,6 @@ export function ProductCard({ product, onOrderCreated }: ProductCardProps) {
           <p className="text-xs text-gray-600 line-clamp-2 mb-2">{description}</p>
 
           <div className="flex-1"></div>
-
-          {/* SDK Error Display */}
-          {sdkError && (
-            <div className="text-xs text-red-600 mb-2 p-2 bg-red-50 rounded">
-              {sdkError.message}
-            </div>
-          )}
 
           {/* Buy Button */}
           <button
