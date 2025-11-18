@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 
 export async function getAllAccounts(userId: string): Promise<{ id: string; name: string }[]> {
   const supabase = await createClient();
@@ -21,7 +22,8 @@ export async function getAllAccounts(userId: string): Promise<{ id: string; name
 
 export async function getAccountPrompt(accountId: string): Promise<string> {
   try {
-    const supabase = await createClient();
+    // Use service client to allow anonymous users to fetch public AI prompts
+    const supabase = createServiceClient();
 
     const { data, error } = await supabase
       .schema('agnopay')
@@ -44,7 +46,8 @@ export async function getAccountPrompt(accountId: string): Promise<string> {
 
 export async function getAccountChatbotSettings(accountId: string): Promise<{ isFullscreen: boolean }> {
   try {
-    const supabase = await createClient();
+    // Use service client to allow anonymous users to fetch public chatbot settings
+    const supabase = createServiceClient();
 
     const { data, error } = await supabase
       .schema('agnopay')
