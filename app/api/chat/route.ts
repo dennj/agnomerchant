@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { getAllProducts } from '@/lib/qdrant/client';
 import { Product } from '@/lib/types/product';
+import { getAccountPrompt } from '@/lib/utils/account';
 
 // Fail fast: Check API keys at module level
 const openaiKey = process.env.OPENAI_API_KEY;
@@ -103,6 +104,9 @@ export async function POST(req: Request) {
       );
     }
 
+    // Fetch the account's custom AI prompt from the database
+    const basePrompt = await getAccountPrompt(accountId);
+
     // Fetch all products for catalog overview (once per conversation)
     let allProducts: Partial<Product>[] = [];
     try {
@@ -116,10 +120,8 @@ export async function POST(req: Request) {
       ? `\n\nAvailable Catalog (${allProducts.length} items):\n${allProducts.map((p) => `- ${p.product_name || p.Name}`).join('\n')}`
       : '';
 
-    const systemMessage = `You are a helpful shopping assistant for a merchant selling courses, events, and products. Help customers find what they're looking for and answer their questions.
-${catalogOverview}
-
-When a user asks about specific products, courses, or events, use the search_products function to find relevant items. Keep responses concise and friendly.`;
+    // Combine the custom prompt with catalog overview
+    const systemMessage = `${basePrompt}${catalogOverview}`;
 
     // Call OpenAI with function calling
     const completion = await Promise.race([

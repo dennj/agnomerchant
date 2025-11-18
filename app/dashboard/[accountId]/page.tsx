@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { CatalogPreview } from '@/components/dashboard/catalog-preview';
 import { AddProductForm } from '@/components/dashboard/add-product-form';
+import { PromptEditor } from '@/components/dashboard/prompt-editor';
 import { Product } from '@/lib/types/product';
 import { Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -129,6 +130,9 @@ export default function AccountDashboardPage() {
           </Badge>
         </div>
       </div>
+
+      {/* AI Prompt Editor */}
+      <PromptEditor accountId={accountId} />
 
       <AddProductForm
         onSuccess={handleProductAdded}

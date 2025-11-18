@@ -18,3 +18,26 @@ export async function getAllAccounts(userId: string): Promise<{ id: string; name
     name: row.accounts?.name || row.account_id,
   }));
 }
+
+export async function getAccountPrompt(accountId: string): Promise<string> {
+  try {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .schema('agnopay')
+      .from('accounts')
+      .select('ai_prompt')
+      .eq('id', accountId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching account prompt:', error);
+      return '';
+    }
+
+    return data?.ai_prompt || '';
+  } catch (error) {
+    console.error('Failed to fetch account prompt:', error);
+    return '';
+  }
+}
