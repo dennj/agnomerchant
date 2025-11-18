@@ -54,7 +54,7 @@ export function ChatbotFullscreen({ accountId }: ChatbotFullscreenProps) {
 
       {/* Chat Window - Full Screen Modal */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 backdrop-blur-md bg-white/30 flex flex-col">
+        <div className="fixed inset-0 z-50 backdrop-blur-xl bg-gray-300/40 flex flex-col">
           {/* Header */}
           <div className="bg-gray-500/70 backdrop-blur-lg text-gray-50 px-6 py-4 flex items-center justify-between border-b border-white/30">
             <div className="flex items-center gap-2">
