@@ -5,6 +5,7 @@ import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
 import { ProductCard } from './product-card';
 import { AgnoPayCheckout } from '@agnopay/sdk';
 import { useChatbot } from '@/hooks/useChatbot';
+import { ChatMessage } from './chat-message';
 
 interface ChatbotBubbleProps {
   accountId: string;
@@ -87,14 +88,7 @@ export function ChatbotBubble({ accountId }: ChatbotBubbleProps) {
                   <div
                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div
-                      className={`max-w-[80%] rounded-2xl p-4 ${msg.role === 'user'
-                        ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-md'
-                        : 'bg-white text-gray-700 shadow-sm border border-gray-100'
-                        }`}
-                    >
-                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                    </div>
+                    <ChatMessage message={msg} variant="bubble" />
                   </div>
 
                   {/* Product Cards */}

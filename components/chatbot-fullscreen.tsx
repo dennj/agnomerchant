@@ -5,6 +5,7 @@ import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
 import { ProductCard } from './product-card';
 import { AgnoPayCheckout } from '@agnopay/sdk';
 import { useChatbot } from '@/hooks/useChatbot';
+import { ChatMessage } from './chat-message';
 
 interface ChatbotFullscreenProps {
   accountId: string;
@@ -86,14 +87,7 @@ export function ChatbotFullscreen({ accountId }: ChatbotFullscreenProps) {
                   <div
                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div
-                      className={`max-w-[80%] rounded-lg p-3 ${msg.role === 'user'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-900'
-                        }`}
-                    >
-                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                    </div>
+                    <ChatMessage message={msg} variant="fullscreen" />
                   </div>
 
                   {/* Product Cards */}

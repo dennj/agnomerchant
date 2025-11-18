@@ -88,7 +88,7 @@ const createOrderIntentTool = {
       properties: {
         product_identifier: {
           type: 'string',
-          description: 'The SKU code or exact product name that the user wants to buy. Use SKU if available from previous search results.',
+          description: 'The SKU code of the product the user wants to buy.',
         },
         quantity: {
           type: 'number',
@@ -180,9 +180,10 @@ export async function POST(req: Request) {
         const functionResult = products && products.length > 0
           ? `Found ${products.length} relevant items:\n${products.map((p: Record<string, unknown>, i: number) => {
             const name = (p.product_name || p.Name) as string;
+            const sku = p.SKU as string;
             const price = Number(p.price) / 100;
             const desc = (p.Short_description || (p.Description as string)?.substring(0, 100)) as string;
-            return `${i + 1}. ${name} - R$ ${price.toFixed(2)} - ${desc}`;
+            return `${i + 1}. ${name} (SKU: ${sku}) - R$ ${price.toFixed(2)} - ${desc}`;
           }).join('\n')}`
           : 'No matching products found in the catalog.';
 
