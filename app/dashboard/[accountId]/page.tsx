@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { CatalogPreview } from '@/components/dashboard/catalog-preview';
 import { AddProductForm } from '@/components/dashboard/add-product-form';
 import { PromptEditor } from '@/components/dashboard/prompt-editor';
+import { UserManagement } from '@/components/dashboard/user-management';
 import { Product } from '@/lib/types/product';
 import { Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -21,49 +22,52 @@ export default function AccountDashboardPage() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [accountName, setAccountName] = useState<string>('');
+  const [accountUsers, setAccountUsers] = useState<{ id: string; email: string }[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch(`/api/products?accountId=${accountId}`);
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to fetch products');
+        throw new Error(data.error);
       }
 
       const data = await response.json();
-      setProducts(data.products || []);
-      setCollectionInfo(data.collectionInfo || { name: 'agnopay', pointsCount: 0 });
+      setProducts(data.products);
+      setCollectionInfo(data.collectionInfo);
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [accountId]);
 
-  const fetchAccountName = async () => {
+  const fetchAccountData = useCallback(async () => {
     try {
       const response = await fetch('/api/account');
-      if (response.ok) {
-        const data = await response.json();
-        const account = data.accounts?.find((acc: any) => acc.id === accountId);
-        if (account) {
-          setAccountName(account.name);
-        }
-      }
+      if (!response.ok) throw new Error('Failed to fetch account');
+
+      const data = await response.json();
+      const account = data.accounts.find((acc: { id: string; users: { id: string; email: string }[] }) => acc.id === accountId);
+      if (!account) throw new Error(`Account ${accountId} not found`);
+
+      setAccountUsers(account.users);
+      setCurrentUserId(data.userId);
     } catch (error) {
-      console.error('Error fetching account name:', error);
+      console.error('Error fetching account data:', error);
+      throw error;
     }
-  };
+  }, [accountId]);
 
   useEffect(() => {
     if (accountId) {
-      fetchAccountName();
+      fetchAccountData();
       fetchProducts();
     }
-  }, [accountId]);
+  }, [accountId, fetchAccountData, fetchProducts]);
 
   const handleProductAdded = () => {
     fetchProducts();
@@ -80,7 +84,7 @@ export default function AccountDashboardPage() {
   };
 
   const handleProductDelete = async (product: Product) => {
-    const productName = product.product_name || product.Name || 'this product';
+    const productName = product.product_name || product.Name;
 
     if (!confirm(`Are you sure you want to delete "${productName}"? This action cannot be undone.`)) {
       return;
@@ -94,7 +98,7 @@ export default function AccountDashboardPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete product');
+        throw new Error(data.error);
       }
 
       fetchProducts();
@@ -147,6 +151,14 @@ export default function AccountDashboardPage() {
         totalCount={collectionInfo.pointsCount}
         onProductEdit={handleProductEdit}
         onProductDelete={handleProductDelete}
+      />
+
+      {/* User Management */}
+      <UserManagement
+        accountId={accountId}
+        users={accountUsers}
+        currentUserId={currentUserId}
+        onUpdate={fetchAccountData}
       />
 
       {/* Chatbot for this account */}
