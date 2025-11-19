@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { QdrantClient } from '@qdrant/js-client-rest';
-import { getAllProducts, findProductBySKU } from '@/lib/qdrant/client';
+import { getAllProducts, findProductByID } from '@/lib/qdrant/client';
 import { Product } from '@/lib/types/product';
 import { getAccountPrompt } from '@/lib/utils/account';
 
@@ -86,16 +86,16 @@ const createOrderIntentTool = {
     parameters: {
       type: 'object',
       properties: {
-        product_identifier: {
+        product_id: {
           type: 'string',
-          description: 'The SKU code of the product the user wants to buy.',
+          description: 'The product ID.',
         },
         quantity: {
           type: 'number',
           description: 'The quantity the user wants to purchase. Default to 1 if not specified.',
         },
       },
-      required: ['product_identifier'],
+      required: ['product_id'],
     },
   },
 };
@@ -140,7 +140,7 @@ export async function POST(req: Request) {
 
     // Create catalog overview for context
     const catalogOverview = allProducts.length > 0
-      ? `\n\nAvailable Catalog (${allProducts.length} items):\n${allProducts.map((p) => `- ${p.product_name || p.Name}`).join('\n')}`
+      ? `\n\nAvailable Catalog (${allProducts.length} items):\n${allProducts.map((p) => `- ${p.product_name} (ID: ${p.id})`).join('\n')}`
       : '';
 
     // Combine the custom prompt with catalog overview
@@ -179,11 +179,11 @@ export async function POST(req: Request) {
         // Create function result message
         const functionResult = products && products.length > 0
           ? `Found ${products.length} relevant items:\n${products.map((p: Record<string, unknown>, i: number) => {
-            const name = (p.product_name || p.Name) as string;
-            const sku = p.SKU as string;
+            const name = p.product_name as string;
+            const id = p.id as number;
             const price = Number(p.price) / 100;
-            const desc = (p.Short_description || (p.Description as string)?.substring(0, 100)) as string;
-            return `${i + 1}. ${name} (SKU: ${sku}) - R$ ${price.toFixed(2)} - ${desc}`;
+            const desc = p.description as string;
+            return `${i + 1}. ${name} (ID: ${id}) - R$ ${price.toFixed(2)} - ${desc}`;
           }).join('\n')}`
           : 'No matching products found in the catalog.';
 
@@ -217,11 +217,12 @@ export async function POST(req: Request) {
 
       if (toolCall.type === 'function' && toolCall.function.name === 'create_order_intent') {
         const args = JSON.parse(toolCall.function.arguments);
-        const product = await findProductBySKU(accountId, args.product_identifier);
+        const productId = Number(args.product_id);
+        const product = await findProductByID(accountId, productId);
 
         if (!product) {
           return NextResponse.json(
-            { error: `Product "${args.product_identifier}" not found` },
+            { error: `Product with ID "${args.product_id}" not found. Make sure to use the exact product ID from the search results.` },
             { status: 404 }
           );
         }

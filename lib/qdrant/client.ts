@@ -1,4 +1,5 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
+import { CreateProductInput } from '@/lib/types/product';
 
 const COLLECTION_NAME = 'agnopay';
 const VECTOR_NAME = 'text';
@@ -53,7 +54,7 @@ export async function getAllProducts(merchantId: string, limit: number = 100) {
     });
 
     return result.points.map((point) => ({
-      id: point.id.toString(),
+      id: point.id as number,
       ...point.payload as Record<string, any>,
     }));
   } catch (error) {
@@ -62,25 +63,20 @@ export async function getAllProducts(merchantId: string, limit: number = 100) {
   }
 }
 
-// Add a new product to the collection
-export async function addProduct(
+// Upsert a product (create new or update existing)
+export async function upsertProduct(
   merchantId: string,
-  product: {
-    name: string;
-    price: number;
-    description: string;
-    image_url?: string;
-    sku?: string;
-  },
-  embedding: number[]
+  product: CreateProductInput,
+  embedding: number[],
+  productId?: number
 ) {
   try {
     const qdrant = createQdrantClient();
 
-    // Generate a unique ID (timestamp-based)
-    const id = Date.now();
+    // Generate a unique ID if not provided (timestamp-based)
+    const id = productId || Date.now();
 
-    // Insert the product
+    // Upsert the product (creates if new, updates if exists)
     await qdrant.upsert(COLLECTION_NAME, {
       wait: true,
       points: [
@@ -91,123 +87,66 @@ export async function addProduct(
           },
           payload: {
             merchant_id: merchantId,
-            Name: product.name,
-            product_name: product.name,
+            product_name: product.product_name,
             price: product.price,
-            Short_description: product.description,
-            Description: product.description,
+            description: product.description,
             image_url: product.image_url || '',
-            SKU: product.sku || `SKU-${id}`,
           },
         },
       ],
     });
 
-    return { id: id.toString(), success: true };
+    return { id, success: true };
   } catch (error) {
-    console.error('Error adding product:', error);
-    throw new Error('Failed to add product to Qdrant');
+    console.error('Error upserting product:', error);
+    throw new Error('Failed to upsert product to Qdrant');
   }
 }
 
-// Find product by SKU
-export async function findProductBySKU(merchantId: string, sku: string) {
-  // If SKU is empty or invalid, return null immediately
-  if (!sku || sku.trim() === '') {
-    return null;
-  }
-
+// Find product by ID
+export async function findProductByID(merchantId: string, productId: number) {
   try {
     const qdrant = createQdrantClient();
 
-    // Get all products for this merchant and filter manually
-    // This is more reliable than using Qdrant's filter on optional fields
-    const result = await qdrant.scroll(COLLECTION_NAME, {
-      limit: 100,
+    // Get the specific product by ID
+    const result = await qdrant.retrieve(COLLECTION_NAME, {
+      ids: [productId],
       with_payload: true,
       with_vector: false,
-      filter: {
-        must: [
-          { key: 'merchant_id', match: { value: merchantId } }
-        ]
-      }
     });
 
-    // Find product with matching SKU
-    const matchingPoint = result.points.find((point) => {
-      const payload = point.payload as Record<string, any>;
-      return payload.SKU === sku;
-    });
+    // Check if product exists and belongs to this merchant
+    if (result.length === 0) {
+      return null;
+    }
 
-    if (!matchingPoint) {
+    const point = result[0];
+    const payload = point.payload as Record<string, unknown>;
+
+    // Verify merchant ownership
+    if (payload.merchant_id !== merchantId) {
       return null;
     }
 
     return {
-      id: matchingPoint.id.toString(),
-      ...matchingPoint.payload as Record<string, any>,
+      id: point.id as number,
+      ...payload,
     };
   } catch (error) {
-    console.error('Error finding product by SKU:', error);
-    // Return null instead of throwing to allow product creation to continue
+    console.error('Error finding product by ID:', error);
     return null;
   }
 }
 
-// Update an existing product
-export async function updateProduct(
-  productId: string,
-  merchantId: string,
-  product: {
-    name: string;
-    price: number;
-    description: string;
-    image_url?: string;
-    sku?: string;
-  },
-  embedding: number[]
-) {
-  try {
-    const qdrant = createQdrantClient();
-
-    // Update the product using upsert with the existing ID
-    await qdrant.upsert(COLLECTION_NAME, {
-      wait: true,
-      points: [
-        {
-          id: parseInt(productId),
-          vector: {
-            [VECTOR_NAME]: embedding,
-          },
-          payload: {
-            merchant_id: merchantId,
-            Name: product.name,
-            product_name: product.name,
-            price: product.price,
-            Short_description: product.description,
-            Description: product.description,
-            image_url: product.image_url || '',
-            SKU: product.sku || `SKU-${productId}`,
-          },
-        },
-      ],
-    });
-
-    return { id: productId, success: true };
-  } catch (error) {
-    console.error('Error updating product:', error);
-    throw new Error('Failed to update product in Qdrant');
-  }
-}
 
 // Delete a product
-export async function deleteProduct(productId: string) {
+export async function deleteProduct(productId: number) {
   try {
     const qdrant = createQdrantClient();
 
     await qdrant.delete(COLLECTION_NAME, {
       wait: true,
-      points: [parseInt(productId)],
+      points: [productId],
     });
 
     return { id: productId, success: true };
@@ -237,7 +176,7 @@ export async function searchProducts(merchantId: string, query: string, embeddin
     });
 
     return searchResult.map((point) => ({
-      id: point.id.toString(),
+      id: point.id as number,
       score: point.score,
       ...point.payload as Record<string, any>,
     }));

@@ -1,16 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAgnoPayCheckout } from '@agnopay/sdk';
-
-export interface Product {
-  id: string;
-  product_name?: string;
-  Name?: string;
-  price?: number;
-  image_url?: string;
-  Short_description?: string;
-  Description?: string;
-  SKU?: string;
-}
+import { Product } from '@/lib/types/product';
 
 export interface Message {
   role: 'user' | 'assistant';
@@ -99,9 +89,9 @@ export function useChatbot(accountId: string) {
         try {
           const orderData = {
             line_items: [{
-              code: product.SKU!,
-              description: product.product_name || product.Name!,
-              amount: product.price!,
+              code: product.id.toString(),
+              description: product.product_name,
+              amount: product.price,
               quantity: quantity || 1,
             }],
           };

@@ -84,9 +84,7 @@ export default function AccountDashboardPage() {
   };
 
   const handleProductDelete = async (product: Product) => {
-    const productName = product.product_name || product.Name;
-
-    if (!confirm(`Are you sure you want to delete "${productName}"? This action cannot be undone.`)) {
+    if (!confirm(`Are you sure you want to delete "${product.product_name}"? This action cannot be undone.`)) {
       return;
     }
 
@@ -147,8 +145,6 @@ export default function AccountDashboardPage() {
 
       <CatalogPreview
         products={products}
-        collectionName={collectionInfo.name}
-        totalCount={collectionInfo.pointsCount}
         onProductEdit={handleProductEdit}
         onProductDelete={handleProductDelete}
       />

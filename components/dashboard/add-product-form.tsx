@@ -20,11 +20,10 @@ interface AddProductFormProps {
 export function AddProductForm({ onSuccess, initialProduct, onCancelEdit, accountId }: AddProductFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
+    product_name: '',
     price: '',
     description: '',
     image_url: '',
-    sku: '',
   });
 
   const isEditMode = !!initialProduct;
@@ -33,11 +32,10 @@ export function AddProductForm({ onSuccess, initialProduct, onCancelEdit, accoun
   useEffect(() => {
     if (initialProduct) {
       setFormData({
-        name: initialProduct.product_name || initialProduct.Name || '',
-        price: initialProduct.price ? (initialProduct.price / 100).toString() : '',
-        description: initialProduct.Description || initialProduct.Short_description || '',
+        product_name: initialProduct.product_name,
+        price: (initialProduct.price / 100).toString(),
+        description: initialProduct.description,
         image_url: initialProduct.image_url || '',
-        sku: initialProduct.SKU || '',
       });
     }
   }, [initialProduct]);
@@ -46,7 +44,7 @@ export function AddProductForm({ onSuccess, initialProduct, onCancelEdit, accoun
     e.preventDefault();
 
     // Validation
-    if (!formData.name.trim()) {
+    if (!formData.product_name.trim()) {
       toast.error('Product name is required');
       return;
     }
@@ -70,11 +68,11 @@ export function AddProductForm({ onSuccess, initialProduct, onCancelEdit, accoun
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: formData.name.trim(),
+          id: initialProduct?.id, // Include ID when editing
+          product_name: formData.product_name.trim(),
           price: Math.round(parseFloat(formData.price) * 100), // Convert to cents
           description: formData.description.trim(),
           image_url: formData.image_url.trim() || undefined,
-          sku: formData.sku.trim() || undefined,
         }),
       });
 
@@ -92,11 +90,10 @@ export function AddProductForm({ onSuccess, initialProduct, onCancelEdit, accoun
 
       // Reset form
       setFormData({
-        name: '',
+        product_name: '',
         price: '',
         description: '',
         image_url: '',
-        sku: '',
       });
 
       onSuccess();
@@ -140,8 +137,8 @@ export function AddProductForm({ onSuccess, initialProduct, onCancelEdit, accoun
               <Label htmlFor="name">Product Name *</Label>
               <Input
                 id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                value={formData.product_name}
+                onChange={(e) => setFormData({ ...formData, product_name: e.target.value })}
                 placeholder="e.g., Adidas Ultraboost 22"
                 disabled={isLoading}
                 required
@@ -177,29 +174,16 @@ export function AddProductForm({ onSuccess, initialProduct, onCancelEdit, accoun
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="image_url">Image URL</Label>
-              <Input
-                id="image_url"
-                type="url"
-                value={formData.image_url}
-                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                placeholder="https://example.com/image.jpg"
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="sku">SKU</Label>
-              <Input
-                id="sku"
-                value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                placeholder="e.g., UB22-BLK-42"
-                disabled={isLoading}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="image_url">Image URL</Label>
+            <Input
+              id="image_url"
+              type="url"
+              value={formData.image_url}
+              onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+              placeholder="https://example.com/image.jpg"
+              disabled={isLoading}
+            />
           </div>
 
           <Button type="submit" className="w-full" disabled={isLoading}>

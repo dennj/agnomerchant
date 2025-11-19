@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@/lib/supabase/server';
-import { addProduct, getAllProducts, getCollectionInfo, findProductBySKU, updateProduct, deleteProduct } from '@/lib/qdrant/client';
+import { upsertProduct, getAllProducts, getCollectionInfo, deleteProduct } from '@/lib/qdrant/client';
 import { CreateProductInput } from '@/lib/types/product';
 
 const openai = process.env.OPENAI_API_KEY
@@ -41,10 +41,12 @@ export async function POST(req: Request) {
     }
 
     // Parse request body
-    const product: CreateProductInput = await req.json();
+    const body = await req.json();
+    const productId = body.id as number | undefined;
+    const product: CreateProductInput = body;
 
     // Validate required fields
-    if (!product.name || !product.description || !product.price) {
+    if (!product.product_name || !product.description || !product.price) {
       return NextResponse.json(
         { error: 'Name, description, and price are required' },
         { status: 400 }
@@ -59,7 +61,7 @@ export async function POST(req: Request) {
     }
 
     // Generate embedding for the product
-    const embeddingText = `${product.name} ${product.description}`;
+    const embeddingText = `${product.product_name} ${product.description}`;
     const embeddingResult = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: embeddingText,
@@ -68,30 +70,13 @@ export async function POST(req: Request) {
 
     const embedding = embeddingResult.data[0].embedding;
 
-    // Check if a product with this SKU already exists
-    let result;
-    let isUpdate = false;
-
-    if (product.sku) {
-      const existingProduct = await findProductBySKU(accountId, product.sku);
-
-      if (existingProduct) {
-        // Product with this SKU exists - update it
-        result = await updateProduct(existingProduct.id, accountId, product, embedding);
-        isUpdate = true;
-      } else {
-        // No conflict - create new product
-        result = await addProduct(accountId, product, embedding);
-      }
-    } else {
-      // No SKU provided - create new product
-      result = await addProduct(accountId, product, embedding);
-    }
+    // Upsert the product (create if new, update if ID provided)
+    const result = await upsertProduct(accountId, product, embedding, productId);
 
     return NextResponse.json({
       success: true,
       id: result.id,
-      updated: isUpdate,
+      updated: !!productId,
     });
   } catch (error) {
     console.error('Error adding product:', error);
@@ -162,11 +147,19 @@ export async function DELETE(req: Request) {
 
     // Parse query parameters for product ID
     const { searchParams } = new URL(req.url);
-    const productId = searchParams.get('id');
+    const productIdStr = searchParams.get('id');
 
-    if (!productId) {
+    if (!productIdStr) {
       return NextResponse.json(
         { error: 'Product ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const productId = Number(productIdStr);
+    if (isNaN(productId)) {
+      return NextResponse.json(
+        { error: 'Product ID must be a valid number' },
         { status: 400 }
       );
     }

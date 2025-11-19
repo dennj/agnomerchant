@@ -1,21 +1,10 @@
 export interface Product {
-  id: string;
+  id: number;
   merchant_id: string;
-  Name?: string;
-  product_name?: string;
-  price: number;
-  Short_description?: string;
-  Description?: string;
-  image_url?: string;
-  SKU?: string;
-}
-
-export interface CreateProductInput {
-  name: string;
+  product_name: string;
   price: number;
   description: string;
   image_url?: string;
-  sku?: string;
 }
 
-export interface ProductFormData extends CreateProductInput {}
+export type CreateProductInput = Omit<Product, 'id' | 'merchant_id'>;
